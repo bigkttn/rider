@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:my_rider/page/login.dart';
+import 'package:my_rider/page/register.dart';
 
 class Mainpage extends StatefulWidget {
   const Mainpage({super.key});
@@ -23,6 +24,7 @@ class _LoginPageState extends State<Mainpage> {
   void _onRegisterPressed() {
     // debugPrint("สมาชิก clicked");
     // TODO: นำทางไปหน้า register ได้ที่นี่
+    Get.to(() => RegisterPage());
   }
 
   @override

@@ -49,6 +49,20 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  File? _vehicleImageFile;
+
+  Future<void> _pickVehicleImage() async {
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery, // หรือ ImageSource.camera
+    );
+    if (pickedFile != null) {
+      setState(() {
+        _vehicleImageFile = File(pickedFile.path);
+        vehiclePhotoCtl.text = pickedFile.path; // เก็บ path ไว้ใน controller
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,7 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         mapController: mapController,
                         options: MapOptions(
                           initialCenter: LatLng(15.8700317, 100.99254),
-                          initialZoom: 15.0,
+                          initialZoom: 15.2,
                           onTap: (tapPosition, point) async {
                             setState(() {
                               selectedLocation = point;
@@ -241,11 +255,46 @@ class _RegisterPageState extends State<RegisterPage> {
                   ],
 
                   // เฉพาะ role = rider → ฟิลด์เพิ่ม
+                  // เฉพาะ role = rider → ฟิลด์เพิ่ม
                   if (role == "rider") ...[
-                    _buildTextField(
-                      "รูปถ่ายพาหนะ",
-                      "กรุณาอัปโหลดรูปถ่ายพาหนะ",
-                      controller: vehiclePhotoCtl,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "รูปถ่ายพาหนะ",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF3B30),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    GestureDetector(
+                      onTap: _pickVehicleImage,
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.red),
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.grey[200],
+                          image: _vehicleImageFile != null
+                              ? DecorationImage(
+                                  image: FileImage(_vehicleImageFile!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: _vehicleImageFile == null
+                            ? const Center(
+                                child: Icon(
+                                  Icons.add_a_photo,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
                     const SizedBox(height: 15),
                     _buildTextField(
@@ -287,12 +336,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       const Text("หากเป็นสมาชิกแล้ว?"),
                       InkWell(
                         onTap: () {
-                          Navigator.pop(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginPage(),
-                            ),
-                          );
+                          // Navigator.pop(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (context) => const LoginPage(),
+                          //   ),
+                          // );
+                          Get.to(() => LoginPage());
                         },
                         child: const Text(
                           ' เข้าสู่ระบบ',
@@ -383,17 +433,40 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       String collectionName = role == "rider" ? "riders" : "users";
 
-      // ข้อมูลผู้ใช้พื้นฐาน
+      String email = emailCtl.text.trim();
+      String phone = phoneCtl.text.trim();
+
+      // 🔍 ตรวจสอบว่า email หรือ phone ซ้ำ
+      var existing = await db
+          .collection(collectionName)
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        Get.snackbar('ผิดพลาด', 'อีเมลนี้ถูกใช้แล้ว');
+        return;
+      }
+
+      var existingPhone = await db
+          .collection(collectionName)
+          .where('phone', isEqualTo: phone)
+          .get();
+
+      if (existingPhone.docs.isNotEmpty) {
+        Get.snackbar('ผิดพลาด', 'เบอร์โทรศัพท์นี้ถูกใช้แล้ว');
+        return;
+      }
+
+      // ✅ ถ้าไม่ซ้ำ สร้างข้อมูลผู้ใช้
       var userData = {
         'role': role,
-        'email': emailCtl.text.trim(),
+        'email': email,
         'password': passwordCtl.text.trim(),
-        'phone': phoneCtl.text.trim(),
+        'phone': phone,
         'fullname': fullnameCtl.text.trim(),
         'created_at': FieldValue.serverTimestamp(),
       };
 
-      // เพิ่มฟิลด์สำหรับ rider
       if (role == "rider") {
         userData.addAll({
           'vehicle_number': vehicleNumberCtl.text.trim(),
@@ -401,7 +474,6 @@ class _RegisterPageState extends State<RegisterPage> {
         });
       }
 
-      // สร้างผู้ใช้
       DocumentReference userDocRef = await db
           .collection(collectionName)
           .add(userData);
@@ -422,10 +494,11 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       Get.snackbar('สำเร็จ', 'สมัครสมาชิกเรียบร้อย');
-      Navigator.pop(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
+      // Navigator.pop(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => const LoginPage()),
+      // );
+      Get.to(() => const LoginPage());
     } catch (e) {
       log("เกิดข้อผิดพลาด: $e");
       Get.snackbar('ผิดพลาด', e.toString());

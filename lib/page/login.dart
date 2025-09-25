@@ -1,6 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:my_rider/page/homeUser.dart';
+import 'package:my_rider/page/homerider.dart';
 import 'package:my_rider/page/register.dart';
 
 class LoginPage extends StatefulWidget {
@@ -286,8 +290,27 @@ class _LoginPageState extends State<LoginPage> {
 
       if (query.docs.isNotEmpty) {
         // เข้าสู่ระบบสำเร็จ
-        Get.snackbar('สำเร็จ', 'เข้าสู่ระบบเรียบร้อย');
+        // Get.snackbar('สำเร็จ', 'เข้าสู่ระบบเรียบร้อย');
         print('Login successful: ${query.docs.first.id}');
+        if (isUser) {
+          // ถ้าเป็น user
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(builder: (context) => const HomePage()),
+          // );
+          Get.to(() => HomePage());
+        } else {
+          // ถ้าเป็น rider
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (context) => const HomeriderPage(),
+          //   ), // <- สร้างหน้า rider แยก
+          // );
+          Get.to(() => HomeriderPage());
+          log('rider');
+        }
+
         // สามารถนำ user ไปหน้า Home
       } else {
         // ไม่พบผู้ใช้
