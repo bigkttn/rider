@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_rider/page/homeUser.dart';
 import 'package:my_rider/page/homerider.dart';
 import 'package:my_rider/page/register.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -276,42 +278,38 @@ class _LoginPageState extends State<LoginPage> {
     Get.to(() => const RegisterPage());
   }
 
+  String hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
   void login() async {
     String collectionName = isUser ? 'users' : 'riders';
     String email = emailCtl.text.trim();
     String password = passwordCtl.text.trim();
 
     try {
+      // แปลง password ที่กรอกเป็น hash
+      String hashedPassword = hashPassword(password);
+
+      // ดึงข้อมูลจาก Firestore
       var query = await db
           .collection(collectionName)
           .where('email', isEqualTo: email)
-          .where('password', isEqualTo: password)
+          .where('password', isEqualTo: hashedPassword) // ✅ ใช้ hash
           .get();
 
       if (query.docs.isNotEmpty) {
         // เข้าสู่ระบบสำเร็จ
-        // Get.snackbar('สำเร็จ', 'เข้าสู่ระบบเรียบร้อย');
         print('Login successful: ${query.docs.first.id}');
+
         if (isUser) {
-          // ถ้าเป็น user
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => const HomePage()),
-          // );
           Get.to(() => HomePage());
         } else {
-          // ถ้าเป็น rider
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => const HomeriderPage(),
-          //   ), // <- สร้างหน้า rider แยก
-          // );
           Get.to(() => HomeriderPage());
           log('rider');
         }
-
-        // สามารถนำ user ไปหน้า Home
       } else {
         // ไม่พบผู้ใช้
         Get.snackbar('ผิดพลาด', 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
